@@ -1,7 +1,5 @@
+import "dotenv/config";
 import app from "./src/index.js";
-import dotenv from "dotenv";
-
-dotenv.config({ quiet: true });
 
 const startServer = () => {
   const PORT = process.env.PORT || 8000;

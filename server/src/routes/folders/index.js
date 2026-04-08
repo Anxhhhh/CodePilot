@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { createFolder } from "../../controllers/folders/index.js";
+import { createFolder, readFolder } from "../../controllers/folders/index.js";
 
 const router = Router();
 
-router.get("/create", createFolder);
+router.post("/create", createFolder);
+router.post("/read", readFolder);
 
 export default router;
