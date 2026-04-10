@@ -1,36 +1,31 @@
-import axios from "axios";
+import { OpenAI } from "openai";
 
-export async function callHuggingFace(prompt, key) {
+/**
+ * Calls Hugging Face API using the OpenAI SDK
+ * @param {string} prompt - The user prompt
+ * @param {string} [model="zai-org/GLM-5.1:novita"] - The model to use
+ * @returns {Promise<string>} - The AI response
+ */
+export async function getAiResponse(prompt, model = "zai-org/GLM-5.1:novita") {
+  const client = new OpenAI({
+    baseURL: "https://router.huggingface.co/v1",
+    apiKey: process.env.HF_TOKEN,
+  });
+
   try {
-    const res = await axios.post(
-      "https://router.huggingface.co/v1/chat/completions",
-      {
-        model: "Qwen/Qwen3.5-35B-A3B:novita",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        max_tokens: 100,
-        temperature: 0.7,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
+    const chatCompletion = await client.chat.completions.create({
+      model: model,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
         },
-      },
-    );
+      ],
+    });
 
-    return res.data.choices?.[0]?.message?.content || "No response";
-  } catch (err) {
-    if (err.response) {
-      console.error("HF Error Data:", err.response.data);
-      console.error("HF Status:", err.response.status);
-    } else {
-      console.error("HF Error:", err.message);
-    }
-    return "AI Error";
+    return chatCompletion.choices[0].message.content;
+  } catch (error) {
+    console.error("AI API Error:", error.message);
+    throw new Error(error.response?.data?.error || "Failed to get AI response");
   }
 }
