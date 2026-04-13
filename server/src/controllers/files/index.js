@@ -18,7 +18,7 @@ export const createFile = async (req, res) => {
   let currentDir = path.join(path.resolve(), "assets");
   let filePath = path.join(currentDir, name);
 
-  fs.writeFile(filePath, body || "There is nothing here", (err) => {
+  fs.writeFile(filePath, body || "", (err) => {
     if (err) {
       return customError(res, {}, 500, err.message || "Error creating file");
     }
@@ -31,8 +31,7 @@ export const createFile = async (req, res) => {
 };
 
 export const editFile = async (req, res) => {
-  const { name } = req.body;
-  const { content } = req.body;
+  const { name, content } = req.body;
 
   if (!name) {
     return customError(res, {}, 400, "File name is required in body");
@@ -41,9 +40,10 @@ export const editFile = async (req, res) => {
   const currentDir = path.join(path.resolve(), "assets");
   const filePath = path.join(currentDir, name);
 
-  // Check if file exists
-  if (!fs.existsSync(filePath)) {
-    return customError(res, {}, 404, "File not found");
+  // Ensure parent directory exists (for nested paths like webdev/app.js)
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 
   fs.writeFile(filePath, content || "", (err) => {
@@ -71,3 +71,26 @@ export const getFileContent = async (req, res) => {
     return success(res, { content }, `File '${name}' read successfully`);
   });
 };
+
+export const deleteFile = async (req, res) => {
+  const { name } = req.body;
+
+  if (!name) {
+    return customError(res, {}, 400, "File name is required in the request body");
+  }
+
+  const currentDir = path.join(path.resolve(), "assets");
+  const filePath = path.join(currentDir, name);
+
+  if (!fs.existsSync(filePath)) {
+    return customError(res, {}, 404, "File not found");
+  }
+
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      return customError(res, {}, 500, err.message || "Error deleting file");
+    }
+    return success(res, { fileName: name }, `File '${name}' deleted successfully`);
+  });
+};
+

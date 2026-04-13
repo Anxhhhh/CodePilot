@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const Editor = ({ activeFile }) => {
+const Editor = ({ activeFile, fileUpdateKey }) => {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -9,7 +9,7 @@ const Editor = ({ activeFile }) => {
     if (activeFile) {
       loadFileContent();
     }
-  }, [activeFile]);
+  }, [activeFile, fileUpdateKey]);
 
   const loadFileContent = async () => {
     setLoading(true);

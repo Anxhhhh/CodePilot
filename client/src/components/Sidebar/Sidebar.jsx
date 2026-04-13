@@ -1,12 +1,66 @@
 import React, { useState, useEffect } from 'react';
 
-const Sidebar = ({ onFileSelect, activeFile }) => {
+const FileIcon = ({ filename }) => {
+  const extension = filename.split('.').pop().toLowerCase();
+  
+  const iconMap = {
+    html: { color: 'text-orange-500', path: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6' },
+    css: { color: 'text-blue-400', path: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6' },
+    js: { color: 'text-yellow-400', path: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6' },
+    jsx: { color: 'text-cyan-400', path: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6' },
+    json: { color: 'text-yellow-500', path: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6' },
+    md: { color: 'text-slate-400', path: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6' },
+    default: { color: 'text-slate-500', path: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6' }
+  };
+
+  const selected = iconMap[extension] || iconMap.default;
+
+  return (
+    <svg className={`${selected.color} ml-0.5`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+      {extension === 'js' && <text x="7" y="17" fontSize="8" fontWeight="bold" fill="currentColor" stroke="none">JS</text>}
+      {extension === 'jsx' && <text x="7" y="17" fontSize="7" fontWeight="bold" fill="currentColor" stroke="none">JSX</text>}
+      {extension === 'html' && <text x="7" y="17" fontSize="7" fontWeight="bold" fill="currentColor" stroke="none">5</text>}
+      {extension === 'css' && <text x="7" y="17" fontSize="7" fontWeight="bold" fill="currentColor" stroke="none">#</text>}
+      {extension === 'json' && <text x="7" y="17" fontSize="7" fontWeight="bold" fill="currentColor" stroke="none">{}</text>}
+    </svg>
+  );
+};
+
+
+const Sidebar = ({ onFileSelect, activeFile, refreshKey }) => {
   const [files, setFiles] = useState([]);
   const [isCreatingFile, setIsCreatingFile] = useState(false);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [targetParent, setTargetParent] = useState('');
+  const [collapsedFolders, setCollapsedFolders] = useState(new Set());
+
+  const toggleFolder = (folderName) => {
+    setCollapsedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderName)) {
+        newSet.delete(folderName);
+      } else {
+        newSet.add(folderName);
+      }
+      return newSet;
+    });
+  };
+
+  const isVisible = (fileName) => {
+    const parts = fileName.split('/');
+    let currentPath = '';
+    for (let i = 0; i < parts.length - 1; i++) {
+      currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+      if (collapsedFolders.has(currentPath)) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   const fetchFiles = async () => {
     try {
@@ -26,7 +80,8 @@ const Sidebar = ({ onFileSelect, activeFile }) => {
 
   useEffect(() => {
     fetchFiles();
-  }, []);
+  }, [refreshKey]);
+
 
   const handleCreate = async (e) => {
     if (e.key === 'Enter' && inputValue) {
@@ -66,6 +121,13 @@ const Sidebar = ({ onFileSelect, activeFile }) => {
     else setIsCreatingFolder(true);
     setTargetParent(parent);
     setIsCollapsed(false);
+    if (parent) {
+      setCollapsedFolders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(parent);
+        return newSet;
+      });
+    }
   };
 
   const getIndent = (name) => {
@@ -141,10 +203,13 @@ const Sidebar = ({ onFileSelect, activeFile }) => {
               </div>
             )}
 
-            {files.map((file, i) => (
+            {files.filter(file => isVisible(file.name)).map((file, i) => (
               <React.Fragment key={i}>
                 <div 
-                  onClick={() => file.type === 'file' && onFileSelect(file.name)}
+                  onClick={() => {
+                    if (file.type === 'file') onFileSelect(file.name);
+                    else if (file.type === 'folder') toggleFolder(file.name);
+                  }}
                   style={{ paddingLeft: `${16 + getIndent(file.name)}px` }}
                   className={`flex items-center justify-between pr-4 py-1 text-sm transition-colors duration-150 group cursor-pointer ${
                     activeFile === file.name 
@@ -152,15 +217,24 @@ const Sidebar = ({ onFileSelect, activeFile }) => {
                       : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
+                  <div className="flex items-center gap-1.5 truncate">
                     {file.type === 'folder' ? (
-                      <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                      </svg>
+                      <>
+                        <svg 
+                          className={`min-w-[12px] opacity-70 transition-transform duration-200 ${collapsedFolders.has(file.name) ? '' : 'rotate-90'}`} 
+                          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                        >
+                          <path d="m6 9 6 6 6-6"/>
+                        </svg>
+                        <svg className="text-accent ml-0.5" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>
+                      </>
                     ) : (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
-                      </svg>
+                      <>
+                        <div className="min-w-[12px]"></div>
+                        <FileIcon filename={file.name} />
+                      </>
                     )}
                     <span className="truncate">{getName(file.name)}</span>
                   </div>
@@ -186,9 +260,7 @@ const Sidebar = ({ onFileSelect, activeFile }) => {
                 {(isCreatingFile || isCreatingFolder) && targetParent === file.name && (
                   <div className="flex items-center gap-2 pl-8 pr-4 py-1" style={{ paddingLeft: `${16 + getIndent(file.name) + 16}px` }}>
                     {isCreatingFile ? (
-                      <svg className="text-slate-500" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
-                      </svg>
+                      <FileIcon filename={inputValue || 'temp'} />
                     ) : (
                       <svg className="text-accent" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
