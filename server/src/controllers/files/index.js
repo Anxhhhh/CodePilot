@@ -4,6 +4,7 @@ import { customError, created, success } from "../../utils/response.util.js";
 
 export const createFile = async (req, res) => {
   const { name } = req.query;
+  
   const { body } = req.body;
 
   if (!name) {
